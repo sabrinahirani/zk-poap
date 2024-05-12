@@ -16,4 +16,18 @@ template CompAddr() {
 
 }
 
+template FindInQueryAddr(n) {
+
+    signal input k;
+    signal input pk[n];
+
+    signal output att;
+
+    for (var i = 0; i < n; i++) {
+        component comp = CompAddr();
+        // TODO
+    }
+
+}
+
 component main { public [pk] } = CompAddr();
