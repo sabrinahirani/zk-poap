@@ -4,60 +4,40 @@ include "./node_modules/circomlib/circuits/mimcsponge.circom";
 include "./node_modules/circomlib/circuits/bitify.circom";
 include "./circom-ecdsa/eth_addr.circom";
 
-/*
-  Inputs:
-  - addr1 (pub)
-  - addr2 (pub)
-  - addr3 (pub)
-  - msg (pub)
-  - privkey
-
-  Intermediate values:
-  - myAddr (supposed to be addr of privkey)
-  
-  Output:
-  - msgAttestation
-  
-  Prove:
-  - PrivKeyToAddr(privkey) == myAddr
-  - (x - addr1)(x - addr2)(x - addr3) == 0
-  - msgAttestation == mimc(msg, privkey)
-*/
-
 template Main(n, k, m) {
+
     assert(n * k >= 256);
     assert(n * (k-1) < 256);
 
-    signal input privkey[k];
-    signal input addrs[m];
-    signal input msg;
+     // private key
+    signal input pk[k];
 
-    signal myAddr;
+    // queried ethereum addresses
+    signal input addr[m];
 
-    signal output msgAttestation;
-
-    // check that privkey properly represents a 256-bit number
+    // ensure that private key represents 256-bit number 
     component n2bs[k];
     for (var i = 0; i < k; i++) {
         n2bs[i] = Num2Bits(i == k-1 ? 256 - (k-1) * n : n);
-        n2bs[i].in <== privkey[i];
+        n2bs[i].in <== pk[i];
     }
 
-    // compute addr
+    // compute address from private key
+    signal pkAddr;
     component privToAddr = PrivKeyToAddr(n, k);
     for (var i = 0; i < k; i++) {
-        privToAddr.privkey[i] <== privkey[i];
+        privToAddr.privkey[i] <== pk[i];
     }
-    myAddr <== privToAddr.addr;
+    pkAddr <== privToAddr.addr;
 
-    // verify address is one of the provided
-    signal temp[m];
-    temp[0] <-- myAddr - addrs[0];
+    // verify that address is one of queried ethereum addresses
+    signal matchAddr[m];
+    matchAddr[0] <-- (pkAddr - addr[0]);
     for (var i = 1; i < m; i++) {
-        temp[i] <-- temp[i-1] * (myAddr - addrs[i]);
+        matchAddr[i] <-- matchAddr[i-1] * (pkAddr - addr[i]);
     }
-    0 === temp[m-1];
+    matchAddr[m-1] === 0;
+
 }
 
-// example instantiation for main circuit
-component main {public [addrs, msg]} = Main(64, 4, 3);
+component main {public [addr]} = Main(64, 4, 3); // 3 queried addresses

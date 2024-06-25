@@ -5,69 +5,58 @@
 # exit on error
 set -e
 
-# start a new powers of tau ceremony
-snarkjs powersoftau new bn128 20 pot20_0000.ptau -v
+CIRCUIT_NAME="zkPOAP"
+PROOF_SYSTEM="groth16"
 
-# contribute to the ceremony
-snarkjs powersoftau contribute pot20_0000.ptau pot20_0001.ptau --name="First contribution" -v
-snarkjs powersoftau contribute pot20_0001.ptau pot20_0002.ptau --name="Second contribution" -v -e="some random text"
+POWER=20
+POT="./powers-of-tau/pot${POWER}_final.ptau"
 
-# verify so far
-snarkjs powersoftau verify pot20_0002.ptau
+# # ensure powers of tau exists
+# if [ ! -f ${POT} ]; then
+#   echo "${POT} not found — Running ./powers-of-tau/pot.sh"
+#   ./powers-of-tau/pot.sh ${POWER}
+# fi
 
-# apply a random beacon
-snarkjs powersoftau beacon pot20_0002.ptau pot20_beacon.ptau 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f 10 -n="Final Beacon"
+# # compile circuit
+# circom ${CIRCUIT_NAME}.circom --r1cs --wasm --sym
 
-# prepare phase 2
-snarkjs powersoftau prepare phase2 pot20_beacon.ptau pot20_final.ptau -v
+# # see circuit info
+# snarkjs r1cs info ${CIRCUIT_NAME}.r1cs
 
-# verify final
-snarkjs powersoftau verify pot20_final.ptau
+# # see circuit constraints
+# snarkjs r1cs print ${CIRCUIT_NAME}.r1cs ${CIRCUIT_NAME}.sym
 
-# compile circuit
-circom circuit.circom --r1cs --wasm --sym
+# # generate witness
+# node ${CIRCUIT_NAME}_js/generate_witness.js ${CIRCUIT_NAME}_js/${CIRCUIT_NAME}.wasm input.json witness.wtns
+# snarkjs wtns check ${CIRCUIT_NAME}.r1cs witness.wtns
 
-# see circuit info
-snarkjs r1cs info circuit.r1cs
+# # setup proof system
+# snarkjs ${PROOF_SYSTEM} setup ${CIRCUIT_NAME}.r1cs ${POT} ${CIRCUIT_NAME}_0000.zkey
 
-# see circuit constraints
-snarkjs r1cs print circuit.r1cs circuit.sym
+# # contribute to phase 2 ceremony
+# snarkjs zkey contribute ${CIRCUIT_NAME}_0000.zkey ${CIRCUIT_NAME}_0001.zkey --name="First Contribution" -v -e="some random text"
+# snarkjs zkey contribute ${CIRCUIT_NAME}_0001.zkey ${CIRCUIT_NAME}_0002.zkey --name="Second Contribution" -v -e="some more random text"
 
-# export r1cs to json
-snarkjs r1cs export json circuit.r1cs circuit.r1cs.json
-cat circuit.r1cs.json
+# # verify so far
+# snarkjs zkey verify ${CIRCUIT_NAME}.r1cs ${POT} ${CIRCUIT_NAME}_0002.zkey
 
-# generate witness
-node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns
-snarkjs wtns check circuit.r1cs witness.wtns
-
-# setup groth16
-snarkjs groth16 setup circuit.r1cs pot20_final.ptau circuit_0000.zkey
-
-# contribute to phase 2 ceremony
-snarkjs zkey contribute circuit_0000.zkey circuit_0001.zkey --name="1st Contributor Name" -v
-snarkjs zkey contribute circuit_0001.zkey circuit_0002.zkey --name="Second contribution Name" -v -e="Another random entropy"
-
-# verify so far
-snarkjs zkey verify circuit.r1cs pot20_final.ptau circuit_0002.zkey
-
-# apply a random beacon
-snarkjs zkey beacon circuit_0002.zkey circuit_final.zkey 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f 10 -n="Final Beacon phase2"
+# # apply a random beacon
+# snarkjs zkey beacon ${CIRCUIT_NAME}_0002.zkey ${CIRCUIT_NAME}_final.zkey 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f 10 -n="Final Beacon phase2"
 
 # verify final
-snarkjs zkey verify circuit.r1cs pot20_final.ptau circuit_final.zkey
+snarkjs zkey verify ${CIRCUIT_NAME}.r1cs ${POT} ${CIRCUIT_NAME}_final.zkey
 
 # export verification key
-snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
+snarkjs zkey export verificationkey ${CIRCUIT_NAME}_final.zkey verification_key.json
 
 # generate proof
-snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json
+snarkjs ${PROOF_SYSTEM} prove ${CIRCUIT_NAME}_final.zkey witness.wtns proof.json public.json
 
 # verify proof
-snarkjs groth16 verify verification_key.json public.json proof.json
+snarkjs ${PROOF_SYSTEM} verify verification_key.json public.json proof.json
 
 # verifier smart contract
-snarkjs zkey export solidityverifier circuit_final.zkey verifier.sol
+snarkjs zkey export solidityverifier ${CIRCUIT_NAME}_final.zkey verifier.sol
 
 # simulate verification call
 snarkjs zkey export soliditycalldata public.json proof.json

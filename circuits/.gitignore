@@ -1,2 +1,11 @@
+*.r1cs
+*.sym
+*.zkey
+*.wtns
+proof.json
+public.json
+verification_key.json
+zkPOAP_js/
 node_modules/
+powers-of-tau/
 package-lock.json
