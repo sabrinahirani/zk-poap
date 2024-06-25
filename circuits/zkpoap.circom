@@ -40,4 +40,4 @@ template Main(n, k, m) {
 
 }
 
-component main {public [addr]} = Main(64, 4, 3); // 3 queried addresses
+component main {public [addr]} = Main(64, 4, 85); // hardcoded: 85 queried addresses

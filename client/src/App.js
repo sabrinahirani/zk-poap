@@ -7,6 +7,7 @@ import './styles.scss'
 import Home from './components/Home';
 import Success from './components/Success';
 import Failure from './components/Failure';
+import Error from './components/Error';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="*" element={<Home />} />
           <Route path="/success" element={<Success />} />
           <Route path="/failure" element={<Failure />} />
+          <Route path="/error" element={<Error />} />
         </Routes>
       </Router>
     </ChakraProvider>

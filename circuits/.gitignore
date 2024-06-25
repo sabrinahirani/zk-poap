@@ -2,6 +2,7 @@
 *.sym
 *.zkey
 *.wtns
+*.r1cs.json
 proof.json
 public.json
 verification_key.json
